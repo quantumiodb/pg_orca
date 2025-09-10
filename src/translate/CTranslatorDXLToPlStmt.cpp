@@ -391,8 +391,8 @@ Plan *CTranslatorDXLToPlStmt::TranslateDXLTblScan(const CDXLNode *tbl_scan_dxlno
     plan_return = (Plan *)foreign_scan;
   } else {
     SeqScan *seq_scan = makeNode(SeqScan);
-    seq_scan->scan.scanrelid = index;
-    plan = &(seq_scan->scan.plan);
+    seq_scan->scanrelid = index;
+    plan = &(seq_scan->plan);
     plan_return = (Plan *)seq_scan;
 
     plan->targetlist = targetlist;
