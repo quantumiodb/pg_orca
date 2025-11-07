@@ -61,7 +61,10 @@ static PlannedStmt *pg_planner(Query *parse, const char *query_string, int curso
 
 static void ExplainOneQuery(Query *query, int cursorOptions, IntoClause *into, ExplainState *es,
                             const char *queryString, ParamListInfo params, QueryEnvironment *queryEnv) {
-  prev_explain_hook(query, cursorOptions, into, es, queryString, params, queryEnv);
+  // Call the previous hook if it exists
+  if (prev_explain_hook)
+    prev_explain_hook(query, cursorOptions, into, es, queryString, params, queryEnv);
+
   if (config.enable_optimizer)
     ExplainPropertyText("Optimizer", "pg_orca", es);
 }
@@ -103,7 +106,9 @@ void _PG_init(void) {
   prev_planner_hook = planner_hook;
   planner_hook = optimizer::pg_planner;
 
-  prev_explain_hook = ExplainOneQuery_hook ? ExplainOneQuery_hook : standard_ExplainOneQuery;
+  // In PostgreSQL 16, there's no standard_ExplainOneQuery function
+  // We simply save the current hook value (may be NULL)
+  prev_explain_hook = ExplainOneQuery_hook;
   ExplainOneQuery_hook = optimizer::ExplainOneQuery;
 }
 }

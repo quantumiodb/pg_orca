@@ -49,6 +49,7 @@ extern "C" {
 #include <utils/numeric.h>
 #include <utils/partcache.h>
 #include <utils/syscache.h>
+#include <utils/typcache.h>
 }
 
 #include <limits>  // std::numeric_limits

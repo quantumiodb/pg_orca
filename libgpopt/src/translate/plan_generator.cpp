@@ -66,7 +66,9 @@ PlanGenerator::PlanGenerator(CMemoryPool *m_mp, CMDAccessor *catalog) : catalog_
 void FixTragetName(Plan *plan, gpmd::CMDNameArray *names) {
   auto *target_list = plan->targetlist;
   uint32_t idx = 0;
-  foreach_node(TargetEntry, te, target_list) {
+  ListCell *lc;
+  foreach(lc, target_list) {
+    TargetEntry *te = (TargetEntry *)lfirst(lc);
     pfree(te->resname);
     te->resname = CTranslatorUtils::CreateMultiByteCharStringFromWCString((*names)[idx++]->GetMDName()->GetBuffer());
   }
@@ -641,7 +643,9 @@ Plan *PlanGenerator::GenerateAggPlan(PlanGeneratorContext *ctx) {
   plan->lefttree = left;
 
   int32_t aggsplit = 0;
-  foreach_node(TargetEntry, te, plan->targetlist) {
+  ListCell *lc;
+  foreach(lc, plan->targetlist) {
+    TargetEntry *te = (TargetEntry *)lfirst(lc);
     if (IsA(te->expr, Aggref)) {
       Aggref *aggref = (Aggref *)te->expr;
 

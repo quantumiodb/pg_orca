@@ -24,7 +24,10 @@
 
 #define STATS_MAX_DIMENSIONS 8 /* max number of attributes */
 
+// InvalidOid is already defined in postgres.h (postgres_ext.h)
+#ifndef InvalidOid
 #define InvalidOid 0
+#endif
 
 using namespace gpopt;
 
