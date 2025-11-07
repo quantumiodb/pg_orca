@@ -80,35 +80,30 @@ jobs:
           export PATH=/usr/lib/postgresql/${{ matrix.pg_version }}/bin:$PATH
           sudo cmake --build build --target install
 
-      - name: Clone and install pg_tpch (test dependency)
+      - name: Try to install pg_tpch (optional test dependency)
         continue-on-error: true
         run: |
+          # Note: Tests require pg_tpch extension but there's no public repository available
+          # Trying alternative implementation from tvondra/pg_tpch
           cd /tmp
-          git clone https://github.com/quantumiodb/pg_tpch.git || echo "pg_tpch repository not available"
+          git clone https://github.com/tvondra/pg_tpch.git || echo "pg_tpch repository not available"
           if [ -d "pg_tpch" ]; then
             cd pg_tpch
             export PATH=/usr/lib/postgresql/${{ matrix.pg_version }}/bin:$PATH
-            make USE_PGXS=1
-            sudo make USE_PGXS=1 install
-            echo "pg_tpch installed successfully"
+            make USE_PGXS=1 || echo "pg_tpch build failed"
+            sudo make USE_PGXS=1 install || echo "pg_tpch install failed"
+            echo "Attempted pg_tpch installation"
           else
-            echo "Skipping pg_tpch installation"
+            echo "WARNING: pg_tpch not available - some tests will be skipped"
           fi
 
-      - name: Clone and install pg_tpcds (test dependency)
+      - name: Check for pg_tpcds (optional test dependency)
         continue-on-error: true
         run: |
-          cd /tmp
-          git clone https://github.com/quantumiodb/pg_tpcds.git || echo "pg_tpcds repository not available"
-          if [ -d "pg_tpcds" ]; then
-            cd pg_tpcds
-            export PATH=/usr/lib/postgresql/${{ matrix.pg_version }}/bin:$PATH
-            make USE_PGXS=1
-            sudo make USE_PGXS=1 install
-            echo "pg_tpcds installed successfully"
-          else
-            echo "Skipping pg_tpcds installation"
-          fi
+          # Note: Tests require pg_tpcds extension but no public repository is available
+          # The tpcds tests will be skipped without this extension
+          echo "WARNING: pg_tpcds not available - tpcds tests will be skipped"
+          echo "If you have pg_tpcds available, please install it manually before running tests"
 
       - name: Run tests
         continue-on-error: true

@@ -30,6 +30,6 @@
 * ensure you can use pg_config normally, then use `cmake --build build --target install` to install the plugin.
 * Currently, use `pg_orca.enable_orca` to control whether to enable the orca optimizer, it is turned off by default, and needs to be manually enabled. You can set `pg_orca.enable_orca` to enable it.
 * Configure `shared_preload_libraries = 'pg_orca'`, or manually `load 'pg_orca.so';`
-* test depended on pg_tpch and pg_tpcds, you can find them in my repository
+* tests depend on pg_tpch and pg_tpcds extensions. These are optional - the build will succeed without them, but some tests will be skipped. You may use alternative implementations like [tvondra/pg_tpch](https://github.com/tvondra/pg_tpch) for basic testing.
 
 ### Research code, do not use in production

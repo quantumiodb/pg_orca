@@ -30,15 +30,16 @@ This workflow runs on:
 The CI installs the following:
 - PostgreSQL 17 from the official PostgreSQL APT repository
 - Build tools: cmake, ninja-build, clang, llvm
-- Test dependencies: pg_tpch and pg_tpcds (cloned from quantumiodb repos if available)
+- Optional test dependencies: attempts to install pg_tpch from alternative sources
 
 #### Test Dependencies Note
 
-The tests require `pg_tpch` and `pg_tpcds` extensions. The CI attempts to clone and install these from:
-- https://github.com/quantumiodb/pg_tpch
-- https://github.com/quantumiodb/pg_tpcds
+The tests require `pg_tpch` and `pg_tpcds` extensions:
 
-If these repositories are private or unavailable, those steps will be skipped (using `continue-on-error`), and the main build will still succeed.
+- **pg_tpch**: The CI attempts to use an alternative implementation from `tvondra/pg_tpch` (https://github.com/tvondra/pg_tpch). This may not be fully compatible with the expected test format.
+- **pg_tpcds**: No public repository is available. Tests requiring this extension will be skipped.
+
+All test dependency steps use `continue-on-error: true`, so the CI build will succeed even if these extensions cannot be installed. The main CI goal is to verify that pg_orca builds successfully against PostgreSQL 17.
 
 #### Artifacts
 
