@@ -1,20 +1,20 @@
-name: CI with PostgreSQL 17
+name: CI with PostgreSQL
 
 on:
   push:
-    branches: [ main, master, develop, claude/** ]
+    branches: [ main, master, develop, dev, claude/** ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, dev ]
   workflow_dispatch:
 
 jobs:
   build-and-test:
-    name: Build and Test on PostgreSQL 17
+    name: Build and Test on PostgreSQL ${{ matrix.pg_version }}
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        pg_version: [17]
+        pg_version: [16, 17, 18]
 
     steps:
       - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
           # Update the package lists
           sudo apt-get update
 
-      - name: Install PostgreSQL 17
+      - name: Install PostgreSQL ${{ matrix.pg_version }}
         run: |
           sudo apt-get install -y \
             postgresql-${{ matrix.pg_version }} \
