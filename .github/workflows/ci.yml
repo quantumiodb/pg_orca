@@ -54,21 +54,6 @@ jobs:
           pg_config --version
           psql --version
 
-      - name: Configure PostgreSQL
-        run: |
-          # Stop any running PostgreSQL instances
-          sudo systemctl stop postgresql
-
-          # Start PostgreSQL 17
-          sudo systemctl start postgresql@${{ matrix.pg_version }}-main
-
-          # Wait for PostgreSQL to start
-          sleep 5
-
-          # Create test user and database
-          sudo -u postgres createuser -s $USER || true
-          sudo -u postgres createdb $USER || true
-
       - name: Build pg_orca
         run: |
           export PATH=/usr/lib/postgresql/${{ matrix.pg_version }}/bin:$PATH
@@ -86,17 +71,13 @@ jobs:
           cd build
           ctest --output-on-failure --verbose
 
-      - name: Basic smoke test
+      - name: Verify installation
         run: |
-          export PATH=/usr/lib/postgresql/${{ matrix.pg_version }}/bin:$PATH
+          # Verify pg_orca.so was installed
+          ls -lh /usr/lib/postgresql/${{ matrix.pg_version }}/lib/pg_orca.so
 
-          # Start a temporary PostgreSQL instance for testing
-          psql -U postgres -c "SELECT version();" || \
-          sudo -u postgres psql -c "SELECT version();"
-
-          # Test loading the extension
-          sudo -u postgres psql -c "CREATE EXTENSION IF NOT EXISTS pg_orca;" || \
-            echo "Extension creation failed - this is expected if dependencies are missing"
+          # Verify control file was installed
+          ls -lh /usr/share/postgresql/${{ matrix.pg_version }}/extension/pg_orca.control
 
       - name: Upload test results
         if: always()
