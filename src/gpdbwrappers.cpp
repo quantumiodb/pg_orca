@@ -20,15 +20,6 @@
 //
 //---------------------------------------------------------------------------
 
-#include "gpopt/gpdbwrappers.h"
-
-#include <limits>  // std::numeric_limits
-
-#include "catalog/pg_collation.h"
-#include "gpos/base.h"
-#include "gpos/error/CAutoExceptionStack.h"
-#include "gpos/error/CException.h"
-#include "naucrates/exception.h"
 extern "C" {
 #include <postgres.h>
 
@@ -60,6 +51,15 @@ extern "C" {
 #include <utils/syscache.h>
 #include <utils/typcache.h>
 }
+
+#include <limits>  // std::numeric_limits
+
+#include "gpopt/gpdbwrappers.h"
+#include "catalog/pg_collation.h"
+#include "gpos/base.h"
+#include "gpos/error/CAutoExceptionStack.h"
+#include "gpos/error/CException.h"
+#include "naucrates/exception.h"
 
 using namespace gpos;
 

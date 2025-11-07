@@ -1,12 +1,4 @@
-
-
-#include <iostream>
-
-#include "gpopt/CGPOptimizer.h"
-#include "gpopt/config/config.h"
-
 extern "C" {
-
 #include <postgres.h>
 #include <fmgr.h>
 
@@ -15,6 +7,11 @@ extern "C" {
 #include <utils/elog.h>
 #include <utils/guc.h>
 }
+
+#include <iostream>
+
+#include "gpopt/CGPOptimizer.h"
+#include "gpopt/config/config.h"
 
 static bool init = false;
 
