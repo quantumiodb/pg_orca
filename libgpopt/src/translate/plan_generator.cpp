@@ -181,6 +181,7 @@ static SubLinkType Edxlsubplantype(CExpression *expr) {
 
         default:
           GPOS_ASSERT(!"Unexpected origin subquery in correlated left outer join");
+          return EXPR_SUBLINK;  // Fallback for non-debug builds
       }
     }
 
@@ -201,6 +202,7 @@ static SubLinkType Edxlsubplantype(CExpression *expr) {
 
     default:
       GPOS_ASSERT(!"Unexpected correlated join");
+      return EXPR_SUBLINK;  // Fallback for non-debug builds
   }
 }
 
@@ -243,6 +245,7 @@ Expr *PlanGenerator::BuildSubplans(CExpression *expr, CColRefSet *outer_refs) {
 
     default:
       GPOS_ASSERT(!"Unsupported correlated join");
+      return nullptr;  // Fallback for non-debug builds
   }
 }
 

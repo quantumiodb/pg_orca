@@ -86,13 +86,9 @@ class CMDColumn : public IMDColumn {
   // is the column dropped
   bool IsDropped() const override;
 
-  // serialize metadata object in DXL format given a serializer object
-  virtual
-
 #ifdef GPOS_DEBUG
-      // debug print of the column
-      void
-      DebugPrint(IOstream &os) const override;
+  // debug print of the column
+  void DebugPrint(IOstream &os) const override;
 #endif
 };
 

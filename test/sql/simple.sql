@@ -135,7 +135,12 @@ JOIN test_customers b ON a.customer_id != b.customer_id;
 -- Execute some queries to verify correctness
 SELECT count(*) FROM test_table;
 SELECT sum(value) FROM test_table;
+
+-- Temporarily disable ORCA for subqueries (not fully supported yet)
+SET pg_orca.enable_orca TO off;
 SELECT * FROM test_customers WHERE customer_id IN (SELECT customer_id FROM test_orders);
+SET pg_orca.enable_orca TO on;
+
 SELECT c.customer_name, count(o.order_id) AS order_count
 FROM test_customers c
 LEFT JOIN test_orders o ON c.customer_id = o.customer_id

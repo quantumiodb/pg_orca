@@ -23,7 +23,7 @@ message(STATUS "PostgreSQL server include directory: ${PG_SERVER_INCLUDE_DIR}")
 
 enable_testing()
 
-set(ORCA_COMPILE_OPTIONS -march=native -Werror -Wall)
+set(ORCA_COMPILE_OPTIONS -march=native -Werror -Wall -Wno-error=unused-but-set-variable -Wno-error=unused-variable)
 set(ORCA_LINK_OPTIONS "")
 
 option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
@@ -67,7 +67,8 @@ target_compile_options(orca_core
     ${ORCA_COMPILE_OPTIONS}
     # Force postgres.h to be included first in all translation units
     # This ensures postgres.h is always first, preventing include order issues
-    "-include${PG_SERVER_INCLUDE_DIR}/postgres.h"
+    # Using a wrapper to ensure proper extern "C" linkage for C++ compilation
+    "-include${CMAKE_CURRENT_SOURCE_DIR}/src/include/postgres_include.h"
 )
 
 target_link_options(orca_core
@@ -78,8 +79,8 @@ target_link_options(orca_core
 target_compile_definitions(
   orca_core
     PUBLIC
-      GPOS_DEBUG
       USE_CMAKE
+      $<$<CONFIG:Debug>:GPOS_DEBUG>
 )
 
 target_include_directories(
