@@ -106,9 +106,15 @@ void _PG_init(void) {
   prev_planner_hook = planner_hook;
   planner_hook = optimizer::pg_planner;
 
-  // In PostgreSQL 16, there's no standard_ExplainOneQuery function
-  // We simply save the current hook value (may be NULL)
+#if PG_VERSION_NUM >= 170000
+  // PostgreSQL 17+: standard_ExplainOneQuery function exists
+  // Use it as fallback if no other hook is installed
+  prev_explain_hook = ExplainOneQuery_hook ? ExplainOneQuery_hook : standard_ExplainOneQuery;
+#else
+  // PostgreSQL 16 and earlier: No standard_ExplainOneQuery function
+  // Just save the current hook (may be NULL)
   prev_explain_hook = ExplainOneQuery_hook;
+#endif
   ExplainOneQuery_hook = optimizer::ExplainOneQuery;
 }
 }
