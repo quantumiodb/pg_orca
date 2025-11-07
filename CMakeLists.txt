@@ -17,6 +17,10 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 # Find PostgreSQL early so we can use its variables
 find_package(PostgreSQL REQUIRED)
 
+# Extract the server include directory (last element contains postgres.h)
+list(GET PostgreSQL_SERVER_INCLUDE_DIRS -1 PG_SERVER_INCLUDE_DIR)
+message(STATUS "PostgreSQL server include directory: ${PG_SERVER_INCLUDE_DIR}")
+
 enable_testing()
 
 set(ORCA_COMPILE_OPTIONS -march=native -Werror -Wall)
@@ -44,7 +48,7 @@ file(
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpdbcost/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpopt/src/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpos/src/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
 
 list(REMOVE_ITEM
@@ -61,6 +65,9 @@ add_library(
 target_compile_options(orca_core
   PUBLIC
     ${ORCA_COMPILE_OPTIONS}
+    # Force postgres.h to be included first in all translation units
+    # This ensures postgres.h is always first, preventing include order issues
+    "-include${PG_SERVER_INCLUDE_DIR}/postgres.h"
 )
 
 target_link_options(orca_core
@@ -78,13 +85,14 @@ target_compile_definitions(
 target_include_directories(
   orca_core
     PUBLIC
-    # PostgreSQL headers must come first to ensure proper compilation
-    ${PostgreSQL_SERVER_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/libnaucrates/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpopt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpdbcost/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpos/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
+    # PostgreSQL headers as SYSTEM includes (with -isystem) to handle postgres.h requirements
+    SYSTEM
+    ${PostgreSQL_SERVER_INCLUDE_DIRS}
 )
 
 add_postgresql_extension(

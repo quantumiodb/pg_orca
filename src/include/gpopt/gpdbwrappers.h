@@ -660,8 +660,11 @@ bool WalkQueryTree(Query *query, bool (*walker)(Node *node, void *context), void
 
 #define LInitialOID(l) lfirst_oid(gpdb::ListHead(l))
 
+// MemSetTest is already defined in postgres.h (c.h), so only define if not already defined
+#ifndef MemSetTest
 #define MemSetTest(val, len) \
   (((len) & LONG_ALIGN_MASK) == 0 && (len) <= MEMSET_LOOP_LIMIT && MEMSET_LOOP_LIMIT != 0 && (val) == 0)
+#endif
 
 #define Palloc0Fast(sz)                                                            \
   (MemSetTest(0, (sz)) ? gpdb::MemCtxtAllocZeroAligned(CurrentMemoryContext, (sz)) \
