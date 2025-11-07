@@ -244,8 +244,8 @@ Expr *PlanGenerator::BuildSubplans(CExpression *expr, CColRefSet *outer_refs) {
       return PdxlnExistentialSubplan(pdrgpcrInner, expr, outer_refs);
 
     default:
-      GPOS_ASSERT(!"Unsupported correlated join");
-      return nullptr;  // Fallback for non-debug builds
+      GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp, GPOS_WSZ_LIT("Unsupported correlated join"));
+      return nullptr;
   }
 }
 
@@ -265,6 +265,11 @@ Plan *PlanGenerator::GenerateCorrelatedNLJoinPlan(PlanGeneratorContext *ctx) {
                                                 COperator::EopPhysicalCorrelatedInLeftSemiNLJoin == op_id)) {
     // TODO
   } else {
+    // Check if operator type is supported before calling BuildSubplans
+    if (op_id != COperator::EopPhysicalCorrelatedLeftSemiNLJoin &&
+        op_id != COperator::EopPhysicalCorrelatedLeftAntiSemiNLJoin) {
+      GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp, GPOS_WSZ_LIT("Unsupported correlated join"));
+    }
     pdxlnCond = BuildSubplans(expr, outer_refs);
   }
   switch (pexprOuterChild->Pop()->Eopid()) {

@@ -336,7 +336,8 @@ SELECT sum(value) FROM test_table;
  61.5
 (1 row)
 
--- Temporarily disable ORCA for subqueries (not fully supported yet)
+-- Note: IN subqueries are not fully supported yet (causes segfault in cleanup)
+-- Temporarily disable ORCA for this query
 SET pg_orca.enable_orca TO off;
 SELECT * FROM test_customers WHERE customer_id IN (SELECT customer_id FROM test_orders);
  customer_id | customer_name | region 

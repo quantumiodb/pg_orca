@@ -136,7 +136,8 @@ JOIN test_customers b ON a.customer_id != b.customer_id;
 SELECT count(*) FROM test_table;
 SELECT sum(value) FROM test_table;
 
--- Temporarily disable ORCA for subqueries (not fully supported yet)
+-- Note: IN subqueries are not fully supported yet (causes segfault in cleanup)
+-- Temporarily disable ORCA for this query
 SET pg_orca.enable_orca TO off;
 SELECT * FROM test_customers WHERE customer_id IN (SELECT customer_id FROM test_orders);
 SET pg_orca.enable_orca TO on;
