@@ -14,6 +14,9 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# Find PostgreSQL early so we can use its variables
+find_package(PostgreSQL REQUIRED)
+
 enable_testing()
 
 set(ORCA_COMPILE_OPTIONS -march=native -Werror -Wall)
@@ -75,15 +78,14 @@ target_compile_definitions(
 target_include_directories(
   orca_core
     PUBLIC
+    # PostgreSQL headers must come first to ensure proper compilation
+    ${PostgreSQL_SERVER_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/libnaucrates/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpopt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpdbcost/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpos/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-    ${PostgreSQL_SERVER_INCLUDE_DIRS}
 )
-
-find_package(PostgreSQL REQUIRED)
 
 add_postgresql_extension(
   pg_orca
