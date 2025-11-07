@@ -72,19 +72,19 @@ extern "C" {
 using namespace gpdxl;
 using namespace gpopt;
 
-typedef enum OrcaCmpType {
-  OrcaCmptEq,    // equality
-  OrcaCmptNEq,   // inequality
-  OrcaCmptLT,    // less than
-  OrcaCmptLEq,   // less or equal to
-  OrcaCmptGT,    // greater than
-  OrcaCmptGEq,   // greater or equal to
-  OrcaCmptOther  // other operator
-} OrcaCmpType;
+typedef enum CmpType {
+  CmptEq,    // equality
+  CmptNEq,   // inequality
+  CmptLT,    // less than
+  CmptLEq,   // less or equal to
+  CmptGT,    // greater than
+  CmptGEq,   // greater or equal to
+  CmptOther  // other operator
+} CmpType;
 
-static const uint32_t cmp_type_mappings[][2] = {{IMDType::EcmptEq, OrcaCmptEq},   {IMDType::EcmptNEq, OrcaCmptNEq},
-                                                {IMDType::EcmptL, OrcaCmptLT},    {IMDType::EcmptG, OrcaCmptGT},
-                                                {IMDType::EcmptGEq, OrcaCmptGEq}, {IMDType::EcmptLEq, OrcaCmptLEq}};
+static const uint32_t cmp_type_mappings[][2] = {{IMDType::EcmptEq, CmptEq},   {IMDType::EcmptNEq, CmptNEq},
+                                                {IMDType::EcmptL, CmptLT},    {IMDType::EcmptG, CmptGT},
+                                                {IMDType::EcmptGEq, CmptGEq}, {IMDType::EcmptLEq, CmptLEq}};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -952,7 +952,7 @@ CMDScalarOpGPDB *CTranslatorRelcacheToDXL::RetrieveScOp(CMemoryPool *mp, IMDId *
   }
 
   // get comparison type
-  OrcaCmpType cmpt = (OrcaCmpType)gpdb::GetComparisonType(op_oid);
+  CmpType cmpt = (CmpType)gpdb::GetComparisonType(op_oid);
   IMDType::ECmpType cmp_type = ParseCmpType(cmpt);
 
   // get func oid
@@ -1697,7 +1697,7 @@ IMDCacheObject *CTranslatorRelcacheToDXL::RetrieveScCmp(CMemoryPool *mp, IMDId *
 
   OID left_oid = CMDIdGPDB::CastMdid(mdid_left)->Oid();
   OID right_oid = CMDIdGPDB::CastMdid(mdid_right)->Oid();
-  OrcaCmpType cmpt = (OrcaCmpType)GetComparisonType(cmp_type);
+  CmpType cmpt = (CmpType)GetComparisonType(cmp_type);
 
   OID scalar_cmp_oid = gpdb::GetComparisonOperator(left_oid, right_oid, cmpt);
 
@@ -2280,7 +2280,7 @@ uint32_t CTranslatorRelcacheToDXL::GetComparisonType(IMDType::ECmpType cmp_type)
     }
   }
 
-  return OrcaCmptOther;
+  return CmptOther;
 }
 
 //---------------------------------------------------------------------------

@@ -13,15 +13,14 @@
 //
 //---------------------------------------------------------------------------
 
+#include "gpopt/utils/COptTasks.h"
 
 extern "C" {
 
-#include <postgres.h>
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 }
 
-#include "gpopt/utils/COptTasks.h"
 #include "gpdbcost/CCostModelGPDB.h"
 #include "gpopt/base/CAutoOptCtxt.h"
 #include "gpopt/config/CConfigParamMapping.h"

@@ -18,7 +18,7 @@ static bool init = false;
 static planner_hook_type prev_planner_hook = nullptr;
 static ExplainOneQuery_hook_type prev_explain_hook = nullptr;
 
-namespace orca_optimizer {
+namespace optimizer {
 
 gpdxl::OptConfig config;
 
@@ -46,6 +46,7 @@ static PlannedStmt *pg_planner(Query *parse, const char *query_string, int curso
     case CMD_INSERT:
     case CMD_UPDATE:
     case CMD_DELETE:
+    case CMD_MERGE:
     case CMD_UTILITY:
     case CMD_NOTHING:
     case CMD_UNKNOWN:
@@ -64,7 +65,7 @@ static void ExplainOneQuery(Query *query, int cursorOptions, IntoClause *into, E
   if (config.enable_optimizer)
     ExplainPropertyText("Optimizer", "pg_orca", es);
 }
-}  // namespace orca_optimizer
+}  // namespace optimizer
 
 extern "C" {
 
@@ -76,7 +77,7 @@ void _PG_init(void) {
     "pg_orca.enable_orca",
     "use orca planner.",
     NULL,
-    &orca_optimizer::config.enable_optimizer,
+    &optimizer::config.enable_optimizer,
     false,
     PGC_SUSET,
     0,
@@ -89,7 +90,7 @@ void _PG_init(void) {
     "pg_orca.enable_new_planner",
     "use orca planner.",
     NULL,
-    &orca_optimizer::config.enable_new_planner_generation,
+    &optimizer::config.enable_new_planner_generation,
     false,
     PGC_SUSET,
     0,
@@ -100,9 +101,9 @@ void _PG_init(void) {
   // clang-format on
 
   prev_planner_hook = planner_hook;
-  planner_hook = orca_optimizer::pg_planner;
+  planner_hook = optimizer::pg_planner;
 
-  prev_explain_hook = ExplainOneQuery_hook;
-  ExplainOneQuery_hook = orca_optimizer::ExplainOneQuery;
+  prev_explain_hook = ExplainOneQuery_hook ? ExplainOneQuery_hook : standard_ExplainOneQuery;
+  ExplainOneQuery_hook = optimizer::ExplainOneQuery;
 }
 }

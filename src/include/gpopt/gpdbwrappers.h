@@ -24,9 +24,6 @@ extern "C" {
 #include <parser/parse_coerce.h>
 #include <statistics/statistics.h>
 #include <utils/lsyscache.h>
-#ifdef FAULT_INJECTOR
-#include <utils/faultinjector.h>
-#endif
 }
 
 #include "gpos/types.h"
@@ -663,10 +660,8 @@ bool WalkQueryTree(Query *query, bool (*walker)(Node *node, void *context), void
 
 #define LInitialOID(l) lfirst_oid(gpdb::ListHead(l))
 
-#ifndef MemSetTest
 #define MemSetTest(val, len) \
   (((len) & LONG_ALIGN_MASK) == 0 && (len) <= MEMSET_LOOP_LIMIT && MEMSET_LOOP_LIMIT != 0 && (val) == 0)
-#endif
 
 #define Palloc0Fast(sz)                                                            \
   (MemSetTest(0, (sz)) ? gpdb::MemCtxtAllocZeroAligned(CurrentMemoryContext, (sz)) \

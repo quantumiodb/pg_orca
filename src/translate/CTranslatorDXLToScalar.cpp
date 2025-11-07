@@ -26,7 +26,7 @@ extern "C" {
 #include <utils/datum.h>
 }
 
-#include <sstream>
+#include <format>
 #include <vector>
 
 #include "gpopt/base/COptCtxt.h"
@@ -530,7 +530,7 @@ Expr *CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(const CDXLNode *a
   if (dxlop->IsDistinct()) {
     List *aggdistinct = TranslateScalarListChildren((*aggref_node)[EdxlscalaraggrefIndexAggDistinct]);
 
-    uint32_t i = 0;
+    uint32_t i;
     ListCell *lc;
     foreach (lc, aggdistinct) {
       i++;
@@ -550,7 +550,7 @@ Expr *CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(const CDXLNode *a
     }
   }
 
-  int attno = 0;
+  int attno;
   aggref->args = NIL;
   ListCell *lc;
   foreach (lc, args) {
@@ -952,9 +952,7 @@ SubPlan *CTranslatorDXLToScalar::TranslateSubplanFromChildPlan(Plan *plan, SubLi
 //
 //---------------------------------------------------------------------------
 char *CTranslatorDXLToScalar::GetSubplanAlias(uint32_t plan_id) {
-  std::stringstream ss;
-  ss << "SubPlan " << plan_id;
-  auto s = ss.str();
+  auto s = std::format("SubPlan {}", plan_id);
   return pstrdup(s.c_str());
 }
 
