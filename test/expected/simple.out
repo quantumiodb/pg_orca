@@ -1,0 +1,8 @@
+-- This is a placeholder file for the expected output of simple.sql
+-- To generate the actual expected output, run:
+--   1. Build and install pg_orca
+--   2. Run: cd build && ctest --output-on-failure
+--   3. If tests pass, update with: cmake --build . --target update_results
+--   4. Or manually: cp build/test/results/simple.out test/expected/simple.out
+--
+-- This file will be updated after the first successful test run in CI.

@@ -5,14 +5,13 @@
 ```
 test/
 ├── sql/           # 测试 SQL 文件
-│   ├── base.sql   # 基础测试
-│   ├── tpch.sql   # TPC-H 基准测试
-│   └── tpcds.sql  # TPC-DS 基准测试
+│   ├── simple.sql # 简单测试（当前使用，无外部依赖）
+│   ├── base.sql   # 基础测试（需要 pg_tpch，已禁用）
+│   ├── tpch.sql   # TPC-H 基准测试（需要 pg_tpch，已禁用）
+│   └── tpcds.sql  # TPC-DS 基准测试（需要 pg_tpcds，已禁用）
 ├── expected/      # 期望的输出结果
-│   ├── base.out
-│   ├── tpch.out
-│   └── tpcds.out
-├── schedule       # 测试调度文件
+│   └── simple.out # simple 测试的期望输出
+├── schedule       # 测试调度文件（当前只运行 simple）
 └── regression.conf # PostgreSQL 配置
 ```
 
@@ -73,7 +72,7 @@ $PG_REGRESS \
   --inputdir=test \
   --outputdir=./test_results \
   --load-extension=pg_orca \
-  base  # 只运行 base 测试
+  simple  # 只运行 simple 测试
 ```
 
 ### 方法 3: 在现有数据库中手动测试
@@ -89,44 +88,34 @@ postgres=# LOAD 'pg_orca';
 -- 或者配置 shared_preload_libraries = 'pg_orca' 后重启 PostgreSQL
 
 # 3. 手动运行测试 SQL
-postgres=# \i test/sql/base.sql
+postgres=# \i test/sql/simple.sql
 
 # 4. 比较输出
-# 可以将输出重定向到文件并与 expected/base.out 比较
+# 可以将输出重定向到文件并与 expected/simple.out 比较
 ```
 
-## 测试依赖
+## 测试说明
 
-### base.sql
-- **依赖**: pg_tpch 扩展
-- 这个测试创建一些基本表并测试 ORCA 优化器的基本功能
+### simple.sql（当前使用）
+- **依赖**: 无 - 仅使用 PostgreSQL 内置功能
+- 测试 ORCA 优化器的核心功能：
+  - 基本的 SELECT、INSERT 操作
+  - WHERE 子句和表达式
+  - JOIN 操作（INNER、LEFT）
+  - 聚合函数和 GROUP BY
+  - 子查询和 CTE
+  - UNION、EXCEPT、INTERSECT
+  - 各种数据类型和类型转换
 
-### tpch.sql
-- **依赖**: pg_tpch 扩展
-- 运行 TPC-H 基准查询
+### 旧测试文件（已禁用）
 
-### tpcds.sql
-- **依赖**: pg_tpcds 扩展
-- 运行 TPC-DS 基准查询
+以下测试文件需要外部扩展，当前已从 schedule 中移除：
 
-## 安装测试依赖
+- **base.sql**: 需要 pg_tpch 扩展
+- **tpch.sql**: 需要 pg_tpch 扩展（TPC-H 基准测试）
+- **tpcds.sql**: 需要 pg_tpcds 扩展（TPC-DS 基准测试）
 
-### 安装 pg_tpch（可选）
-
-```bash
-# 方案 1: 使用 tvondra/pg_tpch（公开可用）
-cd /tmp
-git clone https://github.com/tvondra/pg_tpch.git
-cd pg_tpch
-make USE_PGXS=1
-sudo make USE_PGXS=1 install
-
-# 方案 2: 如果你有自己的 pg_tpch 实现
-# 将其安装到 PostgreSQL 扩展目录
-```
-
-### pg_tpcds
-目前没有公开可用的 pg_tpcds 实现。如果没有这个扩展，tpcds 测试将失败。
+如果需要运行这些测试，请手动安装相应的扩展并修改 `test/schedule` 文件。
 
 ## 测试输出
 
@@ -171,15 +160,15 @@ cat build/tmp_check/log/*.log
 修改 `test/schedule` 文件：
 
 ```bash
-# 只运行 base 测试
-test: base
+# 只运行 simple 测试（当前默认）
+test: simple
 
-# 运行多个测试
-test: base tpch
+# 如果安装了依赖，可以运行多个测试
+test: simple base tpch
 
 # 并行运行测试（如果支持）
-test: base
-test: tpch tpcds
+test: simple
+test: base tpch
 ```
 
 ## 示例：最小化测试工作流
@@ -215,10 +204,12 @@ ls $(pg_config --pkglibdir)/pg_orca.so
 sudo cmake --build build --target install
 ```
 
-### 错误: "extension pg_tpch not found"
+### 运行旧的 TPC-H/TPC-DS 测试
 ```bash
-# 安装 pg_tpch 或跳过相关测试
-# 编辑 test/schedule，移除 tpch 和 tpcds
+# 如果需要运行需要外部依赖的旧测试：
+# 1. 安装 pg_tpch 或 pg_tpcds 扩展
+# 2. 编辑 test/schedule，添加相应的测试名称
+#    例如: test: simple base tpch
 ```
 
 ### 测试挂起或超时

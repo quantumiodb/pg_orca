@@ -16,8 +16,7 @@ This workflow runs on:
 1. **build-and-test**:
    - Tests pg_orca against PostgreSQL 17
    - Builds the extension using CMake and Ninja
-   - Attempts to install test dependencies (pg_tpch, pg_tpcds)
-   - Runs the test suite via ctest
+   - Runs the test suite via ctest (no external dependencies required)
    - Performs basic smoke tests
 
 2. **build-coverage**:
@@ -30,16 +29,8 @@ This workflow runs on:
 The CI installs the following:
 - PostgreSQL 17 from the official PostgreSQL APT repository
 - Build tools: cmake, ninja-build, clang, llvm
-- Optional test dependencies: attempts to install pg_tpch from alternative sources
 
-#### Test Dependencies Note
-
-The tests require `pg_tpch` and `pg_tpcds` extensions:
-
-- **pg_tpch**: The CI attempts to use an alternative implementation from `tvondra/pg_tpch` (https://github.com/tvondra/pg_tpch). This may not be fully compatible with the expected test format.
-- **pg_tpcds**: No public repository is available. Tests requiring this extension will be skipped.
-
-All test dependency steps use `continue-on-error: true`, so the CI build will succeed even if these extensions cannot be installed. The main CI goal is to verify that pg_orca builds successfully against PostgreSQL 17.
+The test suite uses only PostgreSQL built-in functionality and requires no external extensions. This ensures tests can run reliably in any CI environment.
 
 #### Artifacts
 
@@ -62,7 +53,7 @@ cmake --build build
 # Install the extension
 sudo cmake --build build --target install
 
-# Run tests (requires pg_tpch and pg_tpcds to be installed)
+# Run tests (no external dependencies required)
 cd build
 ctest --output-on-failure --verbose
 ```

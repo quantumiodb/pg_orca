@@ -1,1 +1,1 @@
-test: base tpcds tpch
+test: simple

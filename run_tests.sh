@@ -44,15 +44,16 @@ pg_orca 测试运行脚本
   --update-expected       更新期望结果（慎用！）
 
 测试名称（可选）:
-  base                    只运行 base 测试
-  tpch                    只运行 tpch 测试
-  tpcds                   只运行 tpcds 测试
-  （不指定则运行所有测试）
+  simple                  只运行 simple 测试（默认）
+  base                    只运行 base 测试（需要 pg_tpch）
+  tpch                    只运行 tpch 测试（需要 pg_tpch）
+  tpcds                   只运行 tpcds 测试（需要 pg_tpcds）
+  （不指定则运行所有 schedule 中的测试）
 
 示例:
-  $0                      # 运行所有测试
+  $0                      # 运行所有测试（当前只有 simple）
   $0 -b -i                # 构建、安装并运行所有测试
-  $0 base                 # 只运行 base 测试
+  $0 simple               # 只运行 simple 测试
   $0 -v --diff            # 详细输出并在失败时显示差异
 
 EOF
@@ -99,32 +100,8 @@ install_extension() {
 # 检查测试依赖
 check_test_dependencies() {
     info "检查测试依赖..."
-
-    local missing_deps=0
-
-    # 检查 pg_tpch
-    PGSHARE=$(pg_config --sharedir)
-    if [ ! -f "$PGSHARE/extension/pg_tpch.control" ]; then
-        warn "pg_tpch 扩展未安装 - base 和 tpch 测试可能失败"
-        warn "  可以从 https://github.com/tvondra/pg_tpch 安装"
-        missing_deps=1
-    else
-        info "✓ pg_tpch 已安装"
-    fi
-
-    # 检查 pg_tpcds
-    if [ ! -f "$PGSHARE/extension/pg_tpcds.control" ]; then
-        warn "pg_tpcds 扩展未安装 - tpcds 测试将失败"
-        missing_deps=1
-    else
-        info "✓ pg_tpcds 已安装"
-    fi
-
-    if [ $missing_deps -eq 1 ]; then
-        warn "某些测试依赖缺失，但测试仍会继续"
-        warn "按 Ctrl+C 取消，或按回车继续..."
-        read -r
-    fi
+    info "当前测试套件不需要外部依赖"
+    info "使用 simple.sql 测试文件（仅需 PostgreSQL 内置功能）"
 }
 
 # 清理构建目录
@@ -242,7 +219,7 @@ main() {
                 update_expected_flag=true
                 shift
                 ;;
-            base|tpch|tpcds)
+            simple|base|tpch|tpcds)
                 test_name="$1"
                 shift
                 ;;
