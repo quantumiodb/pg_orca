@@ -1594,7 +1594,11 @@ Plan *CTranslatorDXLToPlStmt::TranslateDXLMergeJoin(const CDXLNode *merge_join_d
   SetParamIds(plan);
 
   merge_join->mergeFamilies = (Oid *)gpdb::GPDBAlloc(sizeof(Oid) * num_join_conds);
+#if PG_VERSION_NUM >= 180000
+  merge_join->mergeReversals = (bool *)gpdb::GPDBAlloc(sizeof(bool) * num_join_conds);
+#else
   merge_join->mergeStrategies = (int *)gpdb::GPDBAlloc(sizeof(int) * num_join_conds);
+#endif
   merge_join->mergeCollations = (Oid *)gpdb::GPDBAlloc(sizeof(Oid) * num_join_conds);
   merge_join->mergeNullsFirst = (bool *)gpdb::GPDBAlloc(sizeof(bool) * num_join_conds);
 
@@ -1623,7 +1627,11 @@ Plan *CTranslatorDXLToPlStmt::TranslateDXLMergeJoin(const CDXLNode *merge_join_d
 
       // Make sure that the following properties match
       // those in CPhysicalFullMergeJoin::PosRequired().
+#if PG_VERSION_NUM >= 180000
+      merge_join->mergeReversals[ul] = false;  // false = ASC (not reversed)
+#else
       merge_join->mergeStrategies[ul] = BTLessStrategyNumber;
+#endif
       merge_join->mergeNullsFirst[ul] = false;
       ++ul;
     } else {
