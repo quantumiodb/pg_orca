@@ -3,7 +3,9 @@ extern "C" {
 #include <fmgr.h>
 
 #include <commands/explain.h>
+#if PG_VERSION_NUM >= 180000
 #include <commands/explain_format.h>
+#endif
 #include <optimizer/planner.h>
 #include <utils/elog.h>
 #include <utils/guc.h>
