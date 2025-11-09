@@ -25,6 +25,9 @@ extern "C" {
 
 #include <access/amapi.h>
 #include <access/genam.h>
+#if PG_VERSION_NUM >= 180000
+#include <access/table.h>
+#endif
 #include <catalog/pg_aggregate.h>
 #include <catalog/pg_inherits.h>
 #include <commands/defrem.h>
@@ -1178,7 +1181,15 @@ double gpdb::CdbEstimatePartitionedNumTuples(Relation rel) {
 
 void gpdb::CloseRelation(Relation rel) {
   {
+#if PG_VERSION_NUM >= 180000
+    // Check relation kind to use appropriate close function
+    if (rel->rd_rel->relkind == RELKIND_INDEX || rel->rd_rel->relkind == RELKIND_PARTITIONED_INDEX)
+      index_close(rel, AccessShareLock);
+    else
+      table_close(rel, AccessShareLock);
+#else
     RelationClose(rel);
+#endif
     return;
   }
 }
@@ -1205,7 +1216,26 @@ MVDependencies *gpdb::GetMVDependencies(Oid stat_oid) {
 gpdb::RelationWrapper gpdb::GetRelation(Oid rel_oid) {
   {
     /* catalog tables: relcache */
+#if PG_VERSION_NUM >= 180000
+    // In PostgreSQL 18+, we need to check if this is a table or index
+    // and use the appropriate open function
+    Relation rel = RelationIdGetRelation(rel_oid);
+    if (!RelationIsValid(rel))
+      return RelationWrapper{nullptr};
+
+    // RelationIdGetRelation doesn't acquire locks, so we need to close it
+    // and reopen with the proper API that acquires locks
+    char relkind = rel->rd_rel->relkind;
+    RelationClose(rel);
+
+    // Use appropriate open function based on relation kind
+    if (relkind == RELKIND_INDEX || relkind == RELKIND_PARTITIONED_INDEX)
+      return RelationWrapper{index_open(rel_oid, AccessShareLock)};
+    else
+      return RelationWrapper{table_open(rel_oid, AccessShareLock)};
+#else
     return RelationWrapper{RelationIdGetRelation(rel_oid)};
+#endif
   }
 }
 
