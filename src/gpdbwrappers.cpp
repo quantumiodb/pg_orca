@@ -1705,6 +1705,8 @@ IndexAmRoutine *gpdb::GetIndexAmRoutineFromAmHandler(Oid am_handler) {
 }
 
 PartitionDesc gpdb::GPDBRelationRetrievePartitionDesc(Relation rel) {
+  if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+	return NULL;
   return RelationGetPartitionDesc(rel, true);
 }
 

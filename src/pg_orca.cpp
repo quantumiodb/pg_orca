@@ -4,6 +4,7 @@
 
 #include "gpopt/CGPOptimizer.h"
 #include "gpopt/config/config.h"
+#include "pg_orca_hooks.h"
 
 extern "C" {
 
@@ -105,7 +106,7 @@ void _PG_init(void) {
   prev_planner_hook = planner_hook;
   planner_hook = orca_optimizer::pg_planner;
 
-  prev_explain_hook = ExplainOneQuery_hook;
+  prev_explain_hook = ExplainOneQuery_hook ? ExplainOneQuery_hook : standard_ExplainOneQuery;
   ExplainOneQuery_hook = orca_optimizer::ExplainOneQuery;
 }
 }
