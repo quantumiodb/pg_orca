@@ -223,7 +223,7 @@ Node *CQueryMutators::RunIncrLevelsUpMutator(Node *node, SContextIncLevelsupMuta
   // recurse into query structure
   if (IsA(node, Query)) {
     context->m_current_query_level++;
-    Query *query = query_tree_mutator((Query *)node, (MutatorWalkerFn)CQueryMutators::RunIncrLevelsUpMutator, context,
+    Query *query = query_tree_mutator((Query *)node, (Node *(*)())(MutatorWalkerFn)CQueryMutators::RunIncrLevelsUpMutator, context,
                                       0  // flags
     );
     context->m_current_query_level--;
@@ -231,7 +231,7 @@ Node *CQueryMutators::RunIncrLevelsUpMutator(Node *node, SContextIncLevelsupMuta
     return (Node *)query;
   }
 
-  return expression_tree_mutator(node, (MutatorWalkerFn)CQueryMutators::RunIncrLevelsUpMutator, context);
+  return expression_tree_mutator(node, (Node *(*)())(MutatorWalkerFn)CQueryMutators::RunIncrLevelsUpMutator, context);
 }
 
 //---------------------------------------------------------------------------
@@ -260,7 +260,7 @@ bool CQueryMutators::RunFixCTELevelsUpWalker(Node *node, SContextIncLevelsupMuta
   // recurse into query structure, incrementing the query level
   if (IsA(node, Query)) {
     context->m_current_query_level++;
-    bool result = query_tree_walker((Query *)node, (ExprWalkerFn)CQueryMutators::RunFixCTELevelsUpWalker, context,
+    bool result = query_tree_walker((Query *)node, (bool (*)())(ExprWalkerFn)CQueryMutators::RunFixCTELevelsUpWalker, context,
                                     QTW_EXAMINE_RTES_BEFORE  // flags - visit RTEs
     );
     context->m_current_query_level--;
@@ -273,7 +273,7 @@ bool CQueryMutators::RunFixCTELevelsUpWalker(Node *node, SContextIncLevelsupMuta
     return false;
   }
 
-  return expression_tree_walker(node, (ExprWalkerFn)CQueryMutators::RunFixCTELevelsUpWalker, context);
+  return expression_tree_walker(node, (bool (*)())(ExprWalkerFn)CQueryMutators::RunFixCTELevelsUpWalker, context);
 }
 
 //---------------------------------------------------------------------------
@@ -1297,7 +1297,7 @@ Node *CQueryMutators::RunWindowProjListMutator(Node *node, SContextGrpbyPlMutato
     SContextIncLevelsupMutator levelsUpContext(context->m_current_query_level,
                                                true /* should_fix_top_level_target_list */);
     WindowFunc *window_func =
-        (WindowFunc *)expression_tree_mutator(node, (MutatorWalkerFn)RunIncrLevelsUpMutator, &levelsUpContext);
+        (WindowFunc *)expression_tree_mutator(node, (Node *(*)())(MutatorWalkerFn)RunIncrLevelsUpMutator, &levelsUpContext);
     GPOS_ASSERT(IsA(window_func, WindowFunc));
 
     // get the function name and create a new target entry for window_func
@@ -1350,13 +1350,13 @@ Node *CQueryMutators::RunWindowProjListMutator(Node *node, SContextGrpbyPlMutato
   if (IsA(node, Query)) {
     // recurse into Query nodes
     context->m_current_query_level++;
-    Query *result = query_tree_mutator((Query *)node, (MutatorWalkerFn)RunWindowProjListMutator, context, 0);
+    Query *result = query_tree_mutator((Query *)node, (Node *(*)())(MutatorWalkerFn)RunWindowProjListMutator, context, 0);
     context->m_current_query_level--;
 
     return (Node *)result;
   }
 
-  return expression_tree_mutator(node, (MutatorWalkerFn)CQueryMutators::RunWindowProjListMutator, context);
+  return expression_tree_mutator(node, (Node *(*)())(MutatorWalkerFn)CQueryMutators::RunWindowProjListMutator, context);
 }
 
 //---------------------------------------------------------------------------

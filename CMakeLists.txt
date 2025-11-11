@@ -14,6 +14,8 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+find_package(PostgreSQL REQUIRED)
+
 enable_testing()
 
 set(ORCA_COMPILE_OPTIONS -march=native -Werror -Wall)
@@ -80,10 +82,10 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpdbcost/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libgpos/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
+    SYSTEM
     ${PostgreSQL_SERVER_INCLUDE_DIRS}
 )
 
-find_package(PostgreSQL REQUIRED)
 
 add_postgresql_extension(
   pg_orca

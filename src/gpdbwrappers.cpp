@@ -58,6 +58,7 @@ extern "C" {
 #include <utils/numeric.h>
 #include <utils/partcache.h>
 #include <utils/syscache.h>
+#include <utils/typcache.h>
 }
 
 using namespace gpos;
@@ -225,17 +226,17 @@ Size gpdb::DatumSize(Datum value, bool type_by_val, int iTypLen) {
 }
 
 Node *gpdb::MutateExpressionTree(Node *node, Node *(*mutator)(Node *node, void *context), void *context) {
-  { return expression_tree_mutator(node, mutator, context); }
+  { return expression_tree_mutator(node, (Node *(*)()) mutator, context); }
 
   return nullptr;
 }
 
 bool gpdb::WalkExpressionTree(Node *node, bool (*walker)(Node *node, void *context), void *context) {
-  return expression_tree_walker(node, walker, context);
+  return expression_tree_walker(node, (bool (*)()) walker, context);
 }
 
 bool gpdb::WalkQueryTree(Query *query, bool (*walker)(Node *node, void *context), void *context, int flags) {
-  { return query_tree_walker(query, walker, context, flags); }
+  { return query_tree_walker(query, (bool (*)()) walker, context, flags); }
 
   return false;
 }
@@ -413,25 +414,25 @@ Query *gpdb::FlattenJoinAliasVar(Query *query, uint32_t queryLevel) {
 
   List *targetList = queryNew->targetList;
   if (NIL != targetList) {
-    queryNew->targetList = (List *)flatten_join_alias_vars(nullptr, queryNew, (Node *)targetList);
+    queryNew->targetList = (List *)flatten_join_alias_vars(NULL, queryNew, (Node *)targetList);
     list_free(targetList);
   }
 
   List *returningList = queryNew->returningList;
   if (NIL != returningList) {
-    queryNew->returningList = (List *)flatten_join_alias_vars(nullptr, queryNew, (Node *)returningList);
+    queryNew->returningList = (List *)flatten_join_alias_vars(NULL, queryNew, (Node *)returningList);
     list_free(returningList);
   }
 
   Node *havingQual = queryNew->havingQual;
   if (NULL != havingQual) {
-    queryNew->havingQual = flatten_join_alias_vars(nullptr, queryNew, havingQual);
+    queryNew->havingQual = flatten_join_alias_vars(NULL, queryNew, havingQual);
     pfree(havingQual);
   }
 
   Node *limitOffset = queryNew->limitOffset;
   if (NULL != limitOffset) {
-    queryNew->limitOffset = flatten_join_alias_vars(nullptr, queryNew, limitOffset);
+    queryNew->limitOffset = flatten_join_alias_vars(NULL, queryNew, limitOffset);
     pfree(limitOffset);
   }
 
@@ -446,16 +447,16 @@ Query *gpdb::FlattenJoinAliasVar(Query *query, uint32_t queryLevel) {
         continue;
 
       if (wc->startOffset)
-        wc->startOffset = flatten_join_alias_vars(nullptr, queryNew, wc->startOffset);
+        wc->startOffset = flatten_join_alias_vars(NULL, queryNew, wc->startOffset);
 
       if (wc->endOffset)
-        wc->endOffset = flatten_join_alias_vars(nullptr, queryNew, wc->endOffset);
+        wc->endOffset = flatten_join_alias_vars(NULL, queryNew, wc->endOffset);
     }
   }
 
   Node *limitCount = queryNew->limitCount;
   if (NULL != limitCount) {
-    queryNew->limitCount = flatten_join_alias_vars(nullptr, queryNew, limitCount);
+    queryNew->limitCount = flatten_join_alias_vars(NULL, queryNew, limitCount);
     pfree(limitCount);
   }
 
@@ -1135,20 +1136,20 @@ void gpdb::GPDBFree(void *ptr) {
 }
 
 bool gpdb::WalkQueryOrExpressionTree(Node *node, bool (*walker)(Node *node, void *context), void *context, int flags) {
-  { return query_or_expression_tree_walker(node, walker, context, flags); }
+  { return query_or_expression_tree_walker(node, (bool (*)()) walker, context, flags); }
 
   return false;
 }
 
 Node *gpdb::MutateQueryOrExpressionTree(Node *node, Node *(*mutator)(Node *node, void *context), void *context,
                                         int flags) {
-  { return query_or_expression_tree_mutator(node, mutator, context, flags); }
+  { return query_or_expression_tree_mutator(node, (Node *(*)()) mutator, context, flags); }
 
   return nullptr;
 }
 
 Query *gpdb::MutateQueryTree(Query *query, Node *(*mutator)(Node *node, void *context), void *context, int flags) {
-  { return query_tree_mutator(query, mutator, context, flags); }
+  { return query_tree_mutator(query, (Node *(*)()) mutator, context, flags); }
 
   return nullptr;
 }
@@ -1665,7 +1666,7 @@ List *gpdb::MakeTlistFromPathtarget(PathTarget *target) {
 }
 
 Node *gpdb::Expression_tree_mutator(Node *node, Node *(*mutator)(Node *node, void *context), void *context) {
-  { return expression_tree_mutator(node, mutator, context); }
+  { return expression_tree_mutator(node, (Node *(*)()) mutator, context); }
 
   return nullptr;
 }
