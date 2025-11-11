@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "gpos/_api.h"
 #include "gpopt/CGPOptimizer.h"
 #include "gpopt/config/config.h"
 #include "pg_orca_hooks.h"
@@ -26,6 +27,12 @@ namespace orca_optimizer {
 
 gpdxl::OptConfig config;
 
+}  // namespace orca_optimizer
+
+using namespace gpos;
+
+namespace orca_optimizer {
+
 static PlannedStmt *pg_planner(Query *parse, const char *query_string, int cursorOptions, ParamListInfo boundParams) {
   if (!config.enable_optimizer)
     return standard_planner(parse, query_string, cursorOptions, boundParams);
@@ -34,18 +41,29 @@ static PlannedStmt *pg_planner(Query *parse, const char *query_string, int curso
     InitGPOPT();
     init = true;
   }
+
   switch (parse->commandType) {
-    case CMD_SELECT:
-      try {
-        return CGPOptimizer::GPOPTOptimizedPlan(parse, &config);
-      } catch (const std::exception &e) {
-        elog(WARNING, "pg_orca Failed to plan query, get error: %s", e.what());
-        return standard_planner(parse, query_string, cursorOptions, boundParams);
-      } catch (...) {
-        elog(WARNING, "pg_orca Failed to plan query, get unknown error");
+    case CMD_SELECT: {
+      PlannedStmt *plan = nullptr;
+
+      GPOS_TRY {
+        plan = CGPOptimizer::GPOPTOptimizedPlan(parse, &config);
+        if (plan == nullptr) {
+          elog(WARNING, "pg_orca returned NULL plan, falling back to standard planner");
+          return standard_planner(parse, query_string, cursorOptions, boundParams);
+        }
+      }
+      GPOS_CATCH_EX(ex) {
+        elog(WARNING, "pg_orca Failed to plan query, GPOS exception at %s:%d, falling back to standard planner",
+             ex.Filename(), ex.Line());
+        // Don't need GPOS_RESET_EX here since we're returning immediately
         return standard_planner(parse, query_string, cursorOptions, boundParams);
       }
-      break;
+      GPOS_CATCH_END;
+
+      return plan;
+    }
+    break;
 
     case CMD_INSERT:
     case CMD_UPDATE:
