@@ -81,7 +81,6 @@ extern "C" {
 #include "gpopt/translate/CPartPruneStepsBuilder.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 #include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
@@ -2105,30 +2104,16 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry(
 	// invalid funcid indicates TVF evaluates to const
 	if (!dxlop->FuncMdId()->IsValid())
 	{
-		Const *const_expr = MakeNode(Const);
+		CDXLNode *const_dxlnode = (*tvf_dxlnode)[1];
+		CDXLScalarConstValue *const_value =
+			CDXLScalarConstValue::Cast(const_dxlnode->GetOperator());
 
-		const_expr->consttype =
-			CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
-		const_expr->consttypmod = -1;
-
-		CDXLNode *constVa = (*tvf_dxlnode)[1];
-		CDXLScalarConstValue *constValue =
-			CDXLScalarConstValue::Cast(constVa->GetOperator());
-		const CDXLDatum *datum_dxl = constValue->GetDatumVal();
-		CDXLDatumGeneric *datum_generic_dxl =
-			CDXLDatumGeneric::Cast(const_cast<gpdxl::CDXLDatum *>(datum_dxl));
-		const IMDType *type =
-			m_md_accessor->RetrieveType(datum_generic_dxl->MDId());
-		const_expr->constlen = type->Length();
-		Datum val = gpdb::DatumFromPointer(datum_generic_dxl->GetByteArray());
-		ULONG length =
-			(ULONG) gpdb::DatumSize(val, false, const_expr->constlen);
-		CHAR *str = (CHAR *) gpdb::GPDBAlloc(length + 1);
-		memcpy(str, datum_generic_dxl->GetByteArray(), length);
-		str[length] = '\0';
-		const_expr->constvalue = gpdb::DatumFromPointer(str);
-
-		rtfunc->funcexpr = (Node *) const_expr;
+		// build the Const through the scalar translator: hand-rolling it here
+		// used to assume every datum is generic and passed by reference, which
+		// mislabels by-value types such as date or float4
+		rtfunc->funcexpr =
+			(Node *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(
+				const_cast<gpdxl::CDXLDatum *>(const_value->GetDatumVal()));
 	}
 	else
 	{

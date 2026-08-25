@@ -15,6 +15,7 @@
 extern "C" {
 #include "postgres.h"
 
+#include "access/tupmacs.h"
 #include "catalog/pg_collation.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodes.h"
@@ -2027,11 +2028,28 @@ CTranslatorDXLToScalar::TranslateDXLDatumGenericToScalar(CDXLDatum *datum_dxl)
 	}
 	else if (constant->constbyval)
 	{
-		// if it is a by-value constant, the value is stored in the datum.
-		GPOS_ASSERT(constant->constlen >= 0);
-		GPOS_ASSERT((ULONG) constant->constlen <= sizeof(Datum));
-		memcpy(&constant->constvalue, datum_generic_dxl->GetByteArray(),
-			   sizeof(Datum));
+		// A by-value datum carries exactly typlen payload bytes (see
+		// CTranslatorScalarToDXL::ExtractByteArrayFromDatum), and for types
+		// such as date, float4 or "char" that is narrower than a Datum:
+		// picking up sizeof(Datum) bytes reads past the end of the payload.
+		// fetch_att() reads exactly constlen bytes and widens them the way
+		// PostgreSQL does when it builds a Const of that type itself; a
+		// zero-extending copy would disagree with it on negative values.
+		ULONG length = datum_generic_dxl->Length();
+		if (0 >= constant->constlen ||
+			length != (ULONG) constant->constlen ||
+			(1 != length && 2 != length && 4 != length &&
+			 sizeof(Datum) != length))
+		{
+			// payload does not describe a by-value datum of this type; refuse
+			// to read outside of it and let the query fall back
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
+					   CDXLTokens::GetDXLTokenStr(EdxltokenScalarConstValue)
+						   ->GetBuffer());
+		}
+
+		constant->constvalue = fetch_att(datum_generic_dxl->GetByteArray(),
+										 true /*attbyval*/, constant->constlen);
 	}
 	else
 	{
