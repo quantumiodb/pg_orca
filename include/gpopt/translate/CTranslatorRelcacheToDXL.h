@@ -208,7 +208,7 @@ private:
 
 	// get keysets for relation
 	static ULongPtr2dArray *RetrieveRelKeysets(
-		CMemoryPool *mp, OID oid, BOOL should_add_default_keys,
+		CMemoryPool *mp, Relation rel, BOOL should_add_default_keys,
 		BOOL is_partitioned, ULONG *attno_mapping,
 		IMDRelation::Ereldistrpolicy rel_distr_policy);
 

@@ -604,7 +604,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	// get key sets
 	BOOL should_add_default_keys = RelHasSystemColumns(rel->rd_rel->relkind);
-	keyset_array = RetrieveRelKeysets(mp, oid, should_add_default_keys,
+	keyset_array = RetrieveRelKeysets(mp, rel.get(), should_add_default_keys,
 									  is_partitioned, attno_mapping, dist);
 
 	// collect all check constraints
@@ -772,9 +772,16 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 
 
 
+		// A column is NOT NULL for the optimizer only when its not-null
+		// constraint is validated. PG18 allows NOT NULL ... NOT VALID, which
+		// sets attnotnull while existing rows may still hold NULLs; follow the
+		// PG planner (get_relation_notnullatts) and look at attnullability.
+		BOOL is_nullable = ATTNULLABLE_VALID !=
+						   TupleDescCompactAttr(rel->rd_att, ul)->attnullability;
+
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,
-					  !att->attnotnull, att->attisdropped, col_len);
+					  is_nullable, att->attisdropped, col_len);
 
 		mdcol_array->Append(md_col);
 	}
@@ -2880,19 +2887,22 @@ CTranslatorRelcacheToDXL::ConstructAttnoMapping(CMemoryPool *mp,
 //
 //	@doc:
 //		Get key sets for relation
-//		For a relation, 'key sets' contains all 'Unique keys'
-//		defined as unique constraints in the catalog table.
+//		For a relation, 'key sets' contains every column set on which the
+//		relation is duplicate-free: PRIMARY KEY and non-nullable UNIQUE
+//		constraints from the catalog (see get_relation_keys for why a
+//		nullable UNIQUE constraint does not qualify).
 //		Conditionally, a combination of {segid, ctid} is also added.
 //
 //---------------------------------------------------------------------------
 ULongPtr2dArray *
 CTranslatorRelcacheToDXL::RetrieveRelKeysets(
-	CMemoryPool *mp, OID oid, BOOL should_add_default_keys, BOOL is_partitioned,
-	ULONG *attno_mapping, IMDRelation::Ereldistrpolicy rel_distr_policy)
+	CMemoryPool *mp, Relation rel, BOOL should_add_default_keys,
+	BOOL is_partitioned, ULONG *attno_mapping,
+	IMDRelation::Ereldistrpolicy rel_distr_policy)
 {
 	ULongPtr2dArray *key_sets = GPOS_NEW(mp) ULongPtr2dArray(mp);
 
-	List *rel_keys = gpdb::GetRelationKeys(oid);
+	List *rel_keys = gpdb::GetRelationKeys(rel);
 
 	ListCell *lc_key = nullptr;
 	ForEach(lc_key, rel_keys)

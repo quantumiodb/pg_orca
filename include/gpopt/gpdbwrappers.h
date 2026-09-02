@@ -334,7 +334,7 @@ RegProcedure GetOpFunc(Oid opno);
 char *GetOpName(Oid opno);
 
 // keys of the relation with the given oid
-List *GetRelationKeys(Oid relid);
+List *GetRelationKeys(Relation rel);
 
 // relid of a composite type
 Oid GetTypeRelid(Oid typid);

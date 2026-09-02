@@ -56,7 +56,7 @@ List   *get_func_output_arg_types(Oid funcid);
 PageEstimate cdb_estimate_partitioned_numpages(Relation rel);
 
 /* get_relation_keys (from lsyscache.c) */
-List   *get_relation_keys(Oid relid);
+List   *get_relation_keys(Relation rel);
 
 /* testexpr_is_hashable (from subselect.c) */
 bool    testexpr_is_hashable(Node *testexpr, List *param_ids);

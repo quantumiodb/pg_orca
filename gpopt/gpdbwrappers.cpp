@@ -1504,12 +1504,12 @@ gpdb::GetOpName(Oid opno)
 }
 
 List *
-gpdb::GetRelationKeys(Oid relid)
+gpdb::GetRelationKeys(Relation rel)
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_constraint */
-		return get_relation_keys(relid);
+		/* catalog tables: pg_constraint, pg_index */
+		return get_relation_keys(rel);
 	}
 	GP_WRAP_END;
 	return NIL;

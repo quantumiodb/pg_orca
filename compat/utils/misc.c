@@ -459,21 +459,80 @@ cdb_estimate_partitioned_numpages(Relation rel)
  * ======================================================================== */
 
 /*
+ * unique_index_nulls_not_distinct
+ *    Does the unique index backing a constraint treat NULLs as equal
+ *    (UNIQUE NULLS NOT DISTINCT)?  Such an index admits at most one NULL
+ *    per key, so the constraint stays a key even over nullable columns.
+ */
+static bool
+unique_index_nulls_not_distinct(Oid indexoid)
+{
+	HeapTuple	tp;
+	bool		result;
+
+	tp = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexoid));
+	if (!HeapTupleIsValid(tp))
+		return false;
+	result = ((Form_pg_index) GETSTRUCT(tp))->indnullsnotdistinct;
+	ReleaseSysCache(tp);
+
+	return result;
+}
+
+/*
+ * attnums_provably_not_null
+ *    True if every attribute in 'attnums' carries a *validated* NOT NULL
+ *    constraint.  Mirrors get_relation_notnullatts() in the PG planner:
+ *    attnotnull alone is not enough, since PG18 NOT NULL ... NOT VALID sets
+ *    it while existing rows may still be NULL.
+ */
+static bool
+attnums_provably_not_null(Relation rel, List *attnums)
+{
+	ListCell   *lc;
+
+	foreach(lc, attnums)
+	{
+		int			attno = lfirst_int(lc);
+
+		/* system columns cannot appear in a constraint; be conservative */
+		if (attno <= 0 || attno > rel->rd_att->natts)
+			return false;
+		if (TupleDescCompactAttr(rel->rd_att, attno - 1)->attnullability !=
+			ATTNULLABLE_VALID)
+			return false;
+	}
+
+	return true;
+}
+
+/*
  * get_relation_keys
- *    Return a list of relation keys (non-deferrable UNIQUE and PRIMARY KEY
- *    constraints).  Each element of the returned list is itself a List of
- *    int (attribute numbers, int16) that form one key.
+ *    Return a list of relation keys: the non-deferrable PRIMARY KEY and
+ *    UNIQUE constraints under which the relation is duplicate-free.  Each
+ *    element of the returned list is itself a List of int (attribute
+ *    numbers, int16) that form one key.
+ *
+ *    A UNIQUE constraint only forbids duplicates among non-NULL values: a
+ *    nullable key column may hold any number of NULL rows, which DISTINCT /
+ *    GROUP BY must still collapse into one.  ORCA reads a key as "the input
+ *    is already distinct on these columns" (CXformSimplifyGbAgg drops the
+ *    aggregate outright), so a UNIQUE constraint is reported only when every
+ *    column is provably NOT NULL or the index is NULLS NOT DISTINCT.  This
+ *    deviates from the Cloudberry original, which reports every UNIQUE
+ *    constraint.
  */
 List *
-get_relation_keys(Oid relid)
+get_relation_keys(Relation rel)
 {
+	Oid			relid = RelationGetRelid(rel);
 	List	   *keys = NIL;
 	ScanKeyData skey[1];
-	Relation	rel;
+	Relation	conrel;
 	SysScanDesc scan;
 	HeapTuple	htup;
 
-	rel = table_open(ConstraintRelationId, AccessShareLock);
+	conrel = table_open(ConstraintRelationId, AccessShareLock);
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_constraint_conrelid,
@@ -481,7 +540,7 @@ get_relation_keys(Oid relid)
 				F_OIDEQ,
 				ObjectIdGetDatum(relid));
 
-	scan = systable_beginscan(rel, ConstraintRelidTypidNameIndexId, true,
+	scan = systable_beginscan(conrel, ConstraintRelidTypidNameIndexId, true,
 							  NULL, 1, skey);
 
 	while (HeapTupleIsValid(htup = systable_getnext(scan)))
@@ -506,7 +565,7 @@ get_relation_keys(Oid relid)
 			int			i;
 
 			dat = heap_getattr(htup, Anum_pg_constraint_conkey,
-							   RelationGetDescr(rel), &isnull);
+							   RelationGetDescr(conrel), &isnull);
 
 			if (isnull)
 				continue;
@@ -521,12 +580,24 @@ get_relation_keys(Oid relid)
 				key = lappend_int(key, (int) key_elem);
 			}
 
+			/*
+			 * A nullable UNIQUE constraint admits duplicate NULL rows and so
+			 * is not a key.  PRIMARY KEY columns are always NOT NULL.
+			 */
+			if (contuple->contype == CONSTRAINT_UNIQUE &&
+				!unique_index_nulls_not_distinct(contuple->conindid) &&
+				!attnums_provably_not_null(rel, key))
+			{
+				list_free(key);
+				continue;
+			}
+
 			keys = lappend(keys, key);
 		}
 	}
 
 	systable_endscan(scan);
-	table_close(rel, AccessShareLock);
+	table_close(conrel, AccessShareLock);
 
 	return keys;
 }
