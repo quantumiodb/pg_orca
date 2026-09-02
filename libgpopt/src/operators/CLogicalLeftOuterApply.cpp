@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 
+#include "naucrates/statistics/CStatistics.h"
+
 using namespace gpopt;
 
 
@@ -74,6 +76,49 @@ CLogicalLeftOuterApply::DeriveMaxCard(CMemoryPool *,  // mp
 {
 	return CLogical::Maxcard(exprhdl, 2 /*ulScalarIndex*/,
 							 exprhdl.DeriveMaxCard(0));
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CLogicalLeftOuterApply::PstatsDerive
+//
+//	@doc:
+//		Derive statistics
+//
+//---------------------------------------------------------------------------
+IStatistics *
+CLogicalLeftOuterApply::PstatsDerive(CMemoryPool *mp,
+									 CExpressionHandle &exprhdl,
+									 IStatisticsArray *	 // stats_ctxt
+) const
+{
+	GPOS_ASSERT(Esp(exprhdl) > EspNone);
+
+	// A left outer apply preserves every outer (child 0) row: each outer row
+	// yields exactly one output row, with the inner columns NULL-extended when
+	// the correlated inner produces no match (LOJ semantics). Consistently
+	// with DeriveMaxCard(), which likewise derives from the outer child, the
+	// output cardinality is that of the outer child.
+	//
+	// The base CLogicalApply::PstatsDerive() returns a dummy sized at the
+	// generic CStatistics::DefaultRelationRows (1000). That placeholder is only
+	// meant to survive until a decorrelation xform rewrites the apply into a
+	// join whose real stats take over (apply is deliberately EspLow). But when
+	// the apply cannot be decorrelated -- e.g. an IN/EXISTS subquery trapped
+	// inside an OR, which must stay a correlated NL join to compute a per-row
+	// boolean -- that dummy 1000 is what actually reaches costing, decoupling
+	// the estimate from the real outer cardinality and misleading the join
+	// method and row estimates of every operator above it. Size the dummy at
+	// the outer child's real row count instead, preserving the invariant
+	// Card(LOA) == Card(outer).
+	CDouble rows = CStatistics::DefaultRelationRows;
+	IStatistics *outer_stats = exprhdl.Pstats(0);
+	if (nullptr != outer_stats)
+	{
+		rows = outer_stats->Rows();
+	}
+
+	return PstatsDeriveDummy(mp, exprhdl, rows);
 }
 
 //---------------------------------------------------------------------------
