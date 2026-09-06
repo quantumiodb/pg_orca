@@ -1,0 +1,139 @@
+-- Predicates on INCLUDE-only index columns
+--
+-- A predicate that references only INCLUDE ("payload") columns must never be
+-- turned into an index condition: the executor rejects index quals on non-key
+-- attributes ("bogus index qualification", "btree index keys must be ordered
+-- by attribute").  Boolean column references and IS [NOT] NULL tests used to
+-- slip through ORCA's index predicate extraction because those shortcuts skip
+-- the opfamily validation, so cover them explicitly.
+--
+-- See https://github.com/apache/cloudberry/issues/1948
+LOAD 'pg_orca';
+SET pg_orca.enable_orca = on;
+SET client_min_messages = warning;
+create table covering_include (k int, pay int, flag boolean);
+insert into covering_include
+  select i,
+         case when i % 997 = 0 then null else i % 50 end,
+         i % 7 = 0
+  from generate_series(1, 100000) i;
+create index covering_include_i on covering_include (k) include (pay, flag);
+analyze covering_include;
+-- KEYS: [k]    INCLUDED: [pay, flag]
+-- Only the key predicate may become an index condition; the predicate on the
+-- INCLUDE column has to stay a filter.
+EXPLAIN (COSTS OFF) select * from covering_include where k < 30 and flag;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Index Only Scan using covering_include_i on covering_include
+   Index Cond: (k < 30)
+   Filter: flag
+ Optimizer: pg_orca
+(4 rows)
+
+select * from covering_include where k < 30 and flag order by k;
+ k  | pay | flag 
+----+-----+------
+  7 |   7 | t
+ 14 |  14 | t
+ 21 |  21 | t
+ 28 |  28 | t
+(4 rows)
+
+EXPLAIN (COSTS OFF) select * from covering_include where k between 990 and 1000 and pay is null;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Index Only Scan using covering_include_i on covering_include
+   Index Cond: ((k >= 990) AND (k <= 1000))
+   Filter: (pay IS NULL)
+ Optimizer: pg_orca
+(4 rows)
+
+select * from covering_include where k between 990 and 1000 and pay is null order by k;
+  k  | pay | flag 
+-----+-----+------
+ 997 |     | f
+(1 row)
+
+EXPLAIN (COSTS OFF) select * from covering_include where k <= 50 and pay = 7;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Index Only Scan using covering_include_i on covering_include
+   Index Cond: (k <= 50)
+   Filter: (pay = 7)
+ Optimizer: pg_orca
+(4 rows)
+
+select * from covering_include where k <= 50 and pay = 7 order by k;
+ k | pay | flag 
+---+-----+------
+ 7 |   7 | t
+(1 row)
+
+EXPLAIN (COSTS OFF) select * from covering_include where k = 42 and pay is not null;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Index Only Scan using covering_include_i on covering_include
+   Index Cond: (k = 42)
+   Filter: (NOT (pay IS NULL))
+ Optimizer: pg_orca
+(4 rows)
+
+select * from covering_include where k = 42 and pay is not null order by k;
+ k  | pay | flag 
+----+-----+------
+ 42 |  42 | t
+(1 row)
+
+-- Predicates that reference INCLUDE columns only.  With table scans disabled
+-- the index is the only access path left, which is exactly the situation that
+-- used to produce a plan with a bogus index qualification.  Plan shapes here
+-- depend on whether ORCA finds any alternative at all, so only check results.
+set enable_seqscan = off;
+select count(*) from covering_include where flag;
+ count 
+-------
+ 14285
+(1 row)
+
+select count(*) from covering_include where not flag;
+ count 
+-------
+ 85715
+(1 row)
+
+select count(*) from covering_include where pay is null;
+ count 
+-------
+   100
+(1 row)
+
+select count(*) from covering_include where pay is not null;
+ count 
+-------
+ 99900
+(1 row)
+
+select count(*) from covering_include where flag and pay is null;
+ count 
+-------
+    14
+(1 row)
+
+-- same, through the bitmap path
+set enable_indexscan = off;
+select count(*) from covering_include where flag;
+ count 
+-------
+ 14285
+(1 row)
+
+select count(*) from covering_include where pay is null;
+ count 
+-------
+   100
+(1 row)
+
+reset enable_indexscan;
+reset enable_seqscan;
+drop table covering_include;
